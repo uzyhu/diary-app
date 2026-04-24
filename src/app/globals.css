@@ -1,0 +1,191 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  /* 본문은 Noto Sans KR, 제목/브랜드는 Gaegu(손글씨). layout.tsx가 주입하는 CSS 변수에 매핑. */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-sans);
+  --font-display: var(--font-handwritten), "Apple SD Gothic Neo", "Malgun Gothic", cursive;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* 라이트: 누런 종이 + 진한 세피아 텍스트. 각진 모서리와 아날로그 느낌. */
+:root {
+  --background: oklch(0.93 0.04 75);
+  --foreground: oklch(0.28 0.03 55);
+  --card: oklch(0.96 0.03 80);
+  --card-foreground: oklch(0.28 0.03 55);
+  --popover: oklch(0.96 0.03 80);
+  --popover-foreground: oklch(0.28 0.03 55);
+  --primary: oklch(0.3 0.04 55);
+  --primary-foreground: oklch(0.95 0.03 85);
+  --secondary: oklch(0.85 0.04 75);
+  --secondary-foreground: oklch(0.28 0.03 55);
+  --muted: oklch(0.88 0.04 75);
+  --muted-foreground: oklch(0.45 0.03 55);
+  --accent: oklch(0.85 0.04 75);
+  --accent-foreground: oklch(0.28 0.03 55);
+  --destructive: oklch(0.45 0.17 25);
+  --border: oklch(0.75 0.05 70);
+  --input: oklch(0.75 0.05 70);
+  --ring: oklch(0.5 0.08 55);
+  --chart-1: oklch(0.6 0.12 55);
+  --chart-2: oklch(0.5 0.08 55);
+  --chart-3: oklch(0.45 0.17 25);
+  --chart-4: oklch(0.4 0.06 75);
+  --chart-5: oklch(0.3 0.04 55);
+  --radius: 0.25rem;
+  --sidebar: oklch(0.93 0.04 75);
+  --sidebar-foreground: oklch(0.28 0.03 55);
+  --sidebar-primary: oklch(0.3 0.04 55);
+  --sidebar-primary-foreground: oklch(0.95 0.03 85);
+  --sidebar-accent: oklch(0.85 0.04 75);
+  --sidebar-accent-foreground: oklch(0.28 0.03 55);
+  --sidebar-border: oklch(0.75 0.05 70);
+  --sidebar-ring: oklch(0.5 0.08 55);
+}
+
+/* 다크: 오래된 가죽 다이어리. 깊은 갈색 + 따뜻한 크림색 텍스트.
+   card/muted/border 계열은 background와 명도 차이를 충분히 벌려야 카드가 배경에 묻히지 않는다.
+   기준: card는 bg 대비 +0.12, muted/secondary/accent는 +0.16, border/input은 +0.28 이상. */
+.dark {
+  --background: oklch(0.22 0.03 50);
+  --foreground: oklch(0.9 0.04 80);
+  --card: oklch(0.34 0.03 50);
+  --card-foreground: oklch(0.9 0.04 80);
+  --popover: oklch(0.34 0.03 50);
+  --popover-foreground: oklch(0.9 0.04 80);
+  --primary: oklch(0.88 0.04 80);
+  --primary-foreground: oklch(0.22 0.03 50);
+  --secondary: oklch(0.38 0.03 50);
+  --secondary-foreground: oklch(0.9 0.04 80);
+  --muted: oklch(0.38 0.03 50);
+  --muted-foreground: oklch(0.78 0.03 70);
+  --accent: oklch(0.42 0.03 55);
+  --accent-foreground: oklch(0.9 0.04 80);
+  --destructive: oklch(0.6 0.18 28);
+  --border: oklch(0.5 0.04 55);
+  --input: oklch(0.5 0.04 55);
+  --ring: oklch(0.75 0.05 70);
+  --chart-1: oklch(0.72 0.12 55);
+  --chart-2: oklch(0.62 0.08 55);
+  --chart-3: oklch(0.58 0.18 28);
+  --chart-4: oklch(0.52 0.06 75);
+  --chart-5: oklch(0.88 0.04 80);
+  --sidebar: oklch(0.22 0.03 50);
+  --sidebar-foreground: oklch(0.9 0.04 80);
+  --sidebar-primary: oklch(0.88 0.04 80);
+  --sidebar-primary-foreground: oklch(0.22 0.03 50);
+  --sidebar-accent: oklch(0.38 0.03 50);
+  --sidebar-accent-foreground: oklch(0.9 0.04 80);
+  --sidebar-border: oklch(0.5 0.04 55);
+  --sidebar-ring: oklch(0.75 0.05 70);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* 종이 결 느낌의 subtle SVG noise. alpha를 낮게 잡아 텍스트 가독성에 영향을 주지 않는다. */
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.22  0 0 0 0 0.13  0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-attachment: fixed;
+  }
+  /* 다크 모드에서는 어두운 가죽 위에 밝은 노이즈를 살짝 얹어 질감을 유지. */
+  .dark body {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.82  0 0 0 0 0.65  0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+}
+
+/* 제목/브랜드에 손글씨 폰트를 손쉽게 얹기 위한 유틸. Tailwind v4 @utility로 정의한다. */
+@utility font-display {
+  font-family: var(--font-display);
+}
+
+@utility font-handwritten {
+  font-family: var(--font-display);
+}
+
+/* 아날로그 일기장 프레임. 얇은 테두리 + 카드 배경 + 각진 모서리.
+   상세 페이지 공유 박스 등에서 "그려진 선" 같은 가벼운 느낌으로 쓰인다.
+   강렬한 검정 프레임이 아니라 토큰 기반의 은은한 border. */
+@utility vintage-frame {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background-color: var(--card);
+}
+
+/* 본문 텍스트 자체에 직접 적용하는 줄노트 배경.
+   - 본문 <p>(또는 본문을 감싸는 글자 컨테이너)에 얹어 실제 텍스트가
+     차지하는 높이만큼만 줄이 그려진다(빈 영역엔 줄 없음).
+   - leading-7(= 1.75rem) 과 줄 간격을 정확히 맞춰 글자 baseline 바로
+     아래에 한 줄씩 밑줄이 그려지는 느낌.
+   - 색은 --foreground의 연한 버전. 라이트/다크 모두 자동 대응.
+   - `background-attachment: local` 로 스크롤/패딩 기준 맞춤. */
+@utility notepaper-text {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.75rem - 1px),
+    color-mix(in oklch, var(--foreground) 28%, transparent) calc(1.75rem - 1px),
+    color-mix(in oklch, var(--foreground) 28%, transparent) 1.75rem
+  );
+  background-size: 100% 1.75rem;
+  background-repeat: repeat-y;
+  background-position: 0 0;
+  background-attachment: local;
+}
+.dark .notepaper-text {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1.75rem - 1px),
+    color-mix(in oklch, var(--foreground) 35%, transparent) calc(1.75rem - 1px),
+    color-mix(in oklch, var(--foreground) 35%, transparent) 1.75rem
+  );
+}
