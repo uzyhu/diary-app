@@ -1,5 +1,6 @@
 "use client";
 
+import imageCompression from "browser-image-compression";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useActionState } from "react";
@@ -18,6 +19,15 @@ import {
   INITIAL_FORM_STATE,
   type DiaryFormState,
 } from "@/app/(app)/diaries/form-state";
+
+// 클라 압축 타깃. 서버는 여전히 5MB 상한을 검사하므로 그 아래로 확실히 들어가도록 보수적으로 잡는다.
+// 1920px은 현대 폰 카메라 장축 1/2 수준으로, 웹 일기 열람 품질을 해치지 않는다.
+const COMPRESSION_OPTIONS = {
+  maxSizeMB: 1,
+  maxWidthOrHeight: 1920,
+  useWebWorker: true,
+  // 기본값: 입력 파일 타입 유지 (JPEG→JPEG, PNG→PNG, WebP→WebP). 사용자 의도 보존.
+} as const;
 
 type DiaryFormAction = (
   prevState: DiaryFormState,
@@ -71,6 +81,7 @@ export function DiaryForm({
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [removeExisting, setRemoveExisting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const photoFieldError = fieldErrors.photo ?? null;
   const photoErrorMessage = localError ?? photoFieldError;
 
@@ -91,8 +102,9 @@ export function DiaryForm({
 
   const previewUrl = localPreviewUrl ?? (removeExisting ? null : initialPhotoUrl);
 
-  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const input = event.target;
+    const file = input.files?.[0];
     if (localPreviewUrl) {
       URL.revokeObjectURL(localPreviewUrl);
     }
@@ -101,21 +113,47 @@ export function DiaryForm({
       setLocalError(null);
       return;
     }
-    if (file.size > MAX_PHOTO_SIZE) {
-      setLocalPreviewUrl(null);
-      setLocalError("사진은 5MB 이하여야 합니다.");
-      event.target.value = "";
-      return;
-    }
     if (!isAllowedPhotoMimeType(file.type)) {
       setLocalPreviewUrl(null);
       setLocalError("jpg / png / webp 형식만 업로드 가능합니다.");
-      event.target.value = "";
+      input.value = "";
       return;
     }
+
     setLocalError(null);
     setRemoveExisting(false);
-    setLocalPreviewUrl(URL.createObjectURL(file));
+
+    // 원본이 이미 충분히 작으면 압축을 건너뛰어 CPU·시간 낭비를 피한다(≤ 1MB 기준).
+    let finalFile = file;
+    if (file.size > COMPRESSION_OPTIONS.maxSizeMB * 1024 * 1024) {
+      setIsCompressing(true);
+      try {
+        finalFile = await imageCompression(file, COMPRESSION_OPTIONS);
+      } catch (err) {
+        // 압축 실패는 치명적이지 않다 — 원본을 그대로 사용하고 서버 쪽 5MB 체크에 맡긴다.
+        console.error("image compression failed", err);
+        finalFile = file;
+      } finally {
+        setIsCompressing(false);
+      }
+    }
+
+    // 압축 후에도 5MB를 초과하면(예: 텍스트 스크린샷 PNG) 여기서 차단. 서버 왕복을 아낀다.
+    if (finalFile.size > MAX_PHOTO_SIZE) {
+      setLocalPreviewUrl(null);
+      setLocalError("사진이 너무 큽니다. 5MB 이하로 줄여 주세요.");
+      input.value = "";
+      return;
+    }
+
+    // input.files를 압축된 파일로 교체한다. form 제출 시 이 파일이 FormData로 전송된다.
+    // DataTransfer는 Chrome/Firefox/Safari/Edge 모두 지원.
+    if (finalFile !== file) {
+      const dt = new DataTransfer();
+      dt.items.add(finalFile);
+      input.files = dt.files;
+    }
+    setLocalPreviewUrl(URL.createObjectURL(finalFile));
   }
 
   function handleRemoveToggle(event: React.ChangeEvent<HTMLInputElement>) {
@@ -206,6 +244,9 @@ export function DiaryForm({
 
       <div className="space-y-2">
         <Label htmlFor="photo">사진 (선택, 1장, 최대 5MB)</Label>
+        <p className="text-xs text-muted-foreground">
+          큰 사진은 업로드 전에 브라우저에서 자동으로 압축돼요.
+        </p>
         {previewUrl ? (
           // 장식용 미리보기. 실제 alt는 상세 페이지에서 부여한다.
           // eslint-disable-next-line @next/next/no-img-element
@@ -224,9 +265,18 @@ export function DiaryForm({
           onChange={handlePhotoChange}
           aria-invalid={photoErrorMessage ? true : undefined}
           aria-describedby={photoErrorMessage ? "photo-error" : undefined}
-          disabled={isPending}
+          disabled={isPending || isCompressing}
           className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-input file:bg-transparent file:px-3 file:py-1 file:text-sm file:font-medium file:text-foreground hover:file:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
         />
+        {isCompressing ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs text-muted-foreground"
+          >
+            사진 준비 중…
+          </p>
+        ) : null}
         {initialPhotoUrl && !localPreviewUrl ? (
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <input
@@ -265,7 +315,7 @@ export function DiaryForm({
           type="submit"
           size="lg"
           className="w-full sm:w-auto"
-          disabled={isPending}
+          disabled={isPending || isCompressing}
         >
           {isPending ? pendingLabel : submitLabel}
         </Button>
