@@ -163,11 +163,9 @@ export function DiaryForm({
     setLocalPreviewUrl(URL.createObjectURL(finalFile));
   }
 
-  // 폼 제출을 가로채 FormData에 압축된 사진을 주입한 뒤 React 19 form action을 직접 호출한다.
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (isPending || isCompressing) return;
-    const formData = new FormData(event.currentTarget);
+  // React 19 form action 래퍼. 폼이 만든 FormData에 압축된 사진을 주입한 뒤 dispatcher 호출.
+  // onSubmit으로 가로채는 방식과 달리 React가 트랜지션과 isPending을 자동 관리해 준다.
+  function dispatchWithCompressedPhoto(formData: FormData) {
     const compressed = compressedFileRef.current;
     if (compressed) {
       formData.set("photo", compressed);
@@ -192,7 +190,7 @@ export function DiaryForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form action={dispatchWithCompressedPhoto} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="date">날짜</Label>
         <Input
