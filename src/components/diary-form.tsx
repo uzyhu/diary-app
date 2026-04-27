@@ -124,11 +124,16 @@ export function DiaryForm({
     setRemoveExisting(false);
 
     // 원본이 이미 충분히 작으면 압축을 건너뛰어 CPU·시간 낭비를 피한다(≤ 1MB 기준).
-    let finalFile = file;
+    let finalFile: File = file;
     if (file.size > COMPRESSION_OPTIONS.maxSizeMB * 1024 * 1024) {
       setIsCompressing(true);
       try {
-        finalFile = await imageCompression(file, COMPRESSION_OPTIONS);
+        // 라이브러리가 환경에 따라 Blob을 반환하기도 하므로 항상 File로 감싸 DataTransfer 호환을 보장한다.
+        const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
+        finalFile = new File([compressed], file.name, {
+          type: compressed.type || file.type,
+          lastModified: Date.now(),
+        });
       } catch (err) {
         // 압축 실패는 치명적이지 않다 — 원본을 그대로 사용하고 서버 쪽 5MB 체크에 맡긴다.
         console.error("image compression failed", err);
