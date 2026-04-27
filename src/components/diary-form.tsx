@@ -1,6 +1,7 @@
 "use client";
 
 import imageCompression from "browser-image-compression";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useActionState } from "react";
@@ -173,20 +174,22 @@ export function DiaryForm({
     formAction(formData);
   }
 
-  function handleRemoveToggle(event: React.ChangeEvent<HTMLInputElement>) {
-    const checked = event.target.checked;
-    setRemoveExisting(checked);
-    if (checked) {
-      if (localPreviewUrl) {
-        URL.revokeObjectURL(localPreviewUrl);
-        setLocalPreviewUrl(null);
-      }
-      if (photoInputRef.current) {
-        photoInputRef.current.value = "";
-      }
-      compressedFileRef.current = null;
-      setLocalError(null);
+  // 썸네일 우상단 X 버튼 핸들러. "새로 선택한 사진"과 "기존 저장된 사진" 모두 동일 UI로 제거.
+  // - 새 사진(localPreviewUrl 존재): 단순히 입력만 비우면 끝(저장 시 photo_action="keep").
+  // - 기존 사진(initialPhotoUrl 존재): removeExisting을 true로 둬서 photo_action="remove"로 전송.
+  function handleRemovePhoto() {
+    if (localPreviewUrl) {
+      URL.revokeObjectURL(localPreviewUrl);
+      setLocalPreviewUrl(null);
     }
+    compressedFileRef.current = null;
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+    if (initialPhotoUrl) {
+      setRemoveExisting(true);
+    }
+    setLocalError(null);
   }
 
   return (
@@ -266,13 +269,25 @@ export function DiaryForm({
           큰 사진은 업로드 전에 브라우저에서 자동으로 압축돼요.
         </p>
         {previewUrl ? (
-          // 장식용 미리보기. 실제 alt는 상세 페이지에서 부여한다.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previewUrl}
-            alt=""
-            className="max-h-64 w-auto rounded-lg border border-border object-contain"
-          />
+          <div className="relative inline-block">
+            {/* 썸네일 — 작게(h-20). 큰 화면에서도 폼 흐름을 방해하지 않는 크기. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewUrl}
+              alt=""
+              className="block h-20 w-auto rounded-md border border-border object-cover"
+            />
+            <button
+              type="button"
+              onClick={handleRemovePhoto}
+              disabled={isPending || isCompressing}
+              aria-label="사진 제거"
+              title="사진 제거"
+              className="absolute -top-2 -right-2 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <X aria-hidden="true" className="h-3 w-3" />
+            </button>
+          </div>
         ) : null}
         <input
           ref={photoInputRef}
@@ -294,17 +309,6 @@ export function DiaryForm({
           >
             사진 준비 중…
           </p>
-        ) : null}
-        {initialPhotoUrl && !localPreviewUrl ? (
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={removeExisting}
-              onChange={handleRemoveToggle}
-              disabled={isPending}
-            />
-            기존 사진 제거
-          </label>
         ) : null}
         <input type="hidden" name="photo_action" value={photoAction} />
         {photoErrorMessage ? (
