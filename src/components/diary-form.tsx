@@ -78,6 +78,9 @@ export function DiaryForm({
   const fieldErrors = state.fieldErrors ?? {};
   const maxDate = todayISO();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  // 압축본을 React에서 들고 있다가 제출 시 FormData에 주입한다.
+  // input.files를 직접 교체하던 DataTransfer 방식은 일부 브라우저/번들러 환경에서 호환성 문제가 있어 폐기.
+  const compressedFileRef = useRef<File | null>(null);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
   const [removeExisting, setRemoveExisting] = useState(false);
@@ -109,11 +112,13 @@ export function DiaryForm({
       URL.revokeObjectURL(localPreviewUrl);
     }
     if (!file) {
+      compressedFileRef.current = null;
       setLocalPreviewUrl(null);
       setLocalError(null);
       return;
     }
     if (!isAllowedPhotoMimeType(file.type)) {
+      compressedFileRef.current = null;
       setLocalPreviewUrl(null);
       setLocalError("jpg / png / webp 형식만 업로드 가능합니다.");
       input.value = "";
@@ -128,8 +133,9 @@ export function DiaryForm({
     if (file.size > COMPRESSION_OPTIONS.maxSizeMB * 1024 * 1024) {
       setIsCompressing(true);
       try {
-        // 라이브러리가 환경에 따라 Blob을 반환하기도 하므로 항상 File로 감싸 DataTransfer 호환을 보장한다.
-        const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
+        // 라이브러리 타입 시그니처는 File을 약속하지만 런타임에선 환경에 따라 Blob을 반환한다.
+        // 타입을 Blob으로 좁혀 받고 항상 File로 감싸 일관성을 보장.
+        const compressed: Blob = await imageCompression(file, COMPRESSION_OPTIONS);
         finalFile = new File([compressed], file.name, {
           type: compressed.type || file.type,
           lastModified: Date.now(),
@@ -145,20 +151,28 @@ export function DiaryForm({
 
     // 압축 후에도 5MB를 초과하면(예: 텍스트 스크린샷 PNG) 여기서 차단. 서버 왕복을 아낀다.
     if (finalFile.size > MAX_PHOTO_SIZE) {
+      compressedFileRef.current = null;
       setLocalPreviewUrl(null);
       setLocalError("사진이 너무 큽니다. 5MB 이하로 줄여 주세요.");
       input.value = "";
       return;
     }
 
-    // input.files를 압축된 파일로 교체한다. form 제출 시 이 파일이 FormData로 전송된다.
-    // DataTransfer는 Chrome/Firefox/Safari/Edge 모두 지원.
-    if (finalFile !== file) {
-      const dt = new DataTransfer();
-      dt.items.add(finalFile);
-      input.files = dt.files;
-    }
+    // 제출 시 FormData에 이 파일을 주입한다. input.files는 그대로 둔다.
+    compressedFileRef.current = finalFile;
     setLocalPreviewUrl(URL.createObjectURL(finalFile));
+  }
+
+  // 폼 제출을 가로채 FormData에 압축된 사진을 주입한 뒤 React 19 form action을 직접 호출한다.
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isPending || isCompressing) return;
+    const formData = new FormData(event.currentTarget);
+    const compressed = compressedFileRef.current;
+    if (compressed) {
+      formData.set("photo", compressed);
+    }
+    formAction(formData);
   }
 
   function handleRemoveToggle(event: React.ChangeEvent<HTMLInputElement>) {
@@ -172,12 +186,13 @@ export function DiaryForm({
       if (photoInputRef.current) {
         photoInputRef.current.value = "";
       }
+      compressedFileRef.current = null;
       setLocalError(null);
     }
   }
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="date">날짜</Label>
         <Input
